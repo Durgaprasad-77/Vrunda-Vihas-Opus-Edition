@@ -12,10 +12,40 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Vrunda Vihas | Premium Indian Ethnic Wear",
+  title: {
+    default: "Vrunda Vihas | Premium Indian Ethnic Wear - Sarees & Kurtas",
+    template: "%s | Vrunda Vihas",
+  },
   description:
-    "Discover exquisite handcrafted sarees and kurtas. Traditional elegance meets modern sophistication at Vrunda Vihas.",
-    generator: 'v0.app'
+    "Discover exquisite handcrafted Banarasi silk sarees, Kanjivaram sarees, and traditional kurtas at Vrunda Vihas. Shop authentic Indian ethnic wear with free shipping across India.",
+  keywords: [
+    "Indian sarees",
+    "Banarasi silk saree",
+    "Kanjivaram saree",
+    "ethnic wear",
+    "kurtas",
+    "traditional Indian clothing",
+    "handloom sarees",
+    "wedding sarees",
+    "designer sarees",
+  ],
+  authors: [{ name: "Vrunda Vihas" }],
+  creator: "Vrunda Vihas",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    siteName: "Vrunda Vihas",
+    title: "Vrunda Vihas | Premium Indian Ethnic Wear",
+    description:
+      "Discover exquisite handcrafted sarees and kurtas. Traditional elegance meets modern sophistication.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vrunda Vihas | Premium Indian Ethnic Wear",
+    description:
+      "Discover exquisite handcrafted sarees and kurtas. Traditional elegance meets modern sophistication.",
+  },
+  generator: "v0.app",
 }
 
 export default function RootLayout({
@@ -24,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <CartProvider>
           {children}

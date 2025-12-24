@@ -35,6 +35,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -43,8 +51,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 
+interface Product {
+  id: number
+  name: string
+  sku: string
+  category: string
+  type: string
+  price: number
+  comparePrice?: number
+  stock: number
+  status: string
+  image: string
+}
+
 // Sample products data
-const products = [
+const initialProducts: Product[] = [
   {
     id: 1,
     name: "Banarasi Silk Saree - Royal Red",
@@ -139,6 +160,7 @@ interface Variant {
 }
 
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Product[]>(initialProducts)
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false)
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -201,6 +223,58 @@ export default function ProductsPage() {
     }
   }
 
+  const handleExport = () => {
+    const headers = ["ID", "Name", "SKU", "Category", "Type", "Price", "Stock", "Status"]
+    const csvContent = [
+      headers.join(","),
+      ...products.map(p =>
+        [p.id, `"${p.name}"`, p.sku, p.category, p.type, p.price, p.stock, p.status].join(",")
+      )
+    ].join("\n")
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const link = document.createElement("a")
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", "products.csv")
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  }
+
+  const handleImport = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.csv'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        // Simulation of import
+        alert(`Import started for ${file.name}`)
+      }
+    }
+    input.click()
+  }
+
+  const handleAddProduct = () => {
+    const newProduct: Product = {
+      id: products.length + 1,
+      name: "New Product Draft",
+      sku: `NEW-${Math.floor(Math.random() * 1000)}`,
+      category: "Uncategorized",
+      type: "General",
+      price: 0,
+      stock: 0,
+      status: "Draft",
+      image: "/placeholder.svg"
+    }
+    setProducts([newProduct, ...products])
+    setIsAddSheetOpen(false)
+  }
+
   // Product form component
   const ProductForm = ({ isEdit = false }: { isEdit?: boolean }) => (
     <Tabs defaultValue="general" className="w-full">
@@ -226,6 +300,10 @@ export default function ProductsPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
+              <Label htmlFor="sku">SKU *</Label>
+              <Input id="sku" placeholder="e.g., SAR-BAN-001" defaultValue={isEdit ? "SAR-BAN-001" : ""} />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="type">Product Type *</Label>
               <Select defaultValue={isEdit ? "saree" : undefined}>
                 <SelectTrigger>
@@ -240,6 +318,9 @@ export default function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="category">Category *</Label>
               <Select defaultValue={isEdit ? "banarasi" : undefined}>
@@ -257,9 +338,6 @@ export default function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="fabric">Fabric</Label>
               <Select defaultValue={isEdit ? "silk" : undefined}>
@@ -277,21 +355,23 @@ export default function ProductsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="occasion">Occasion</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select occasion" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="wedding">Wedding</SelectItem>
-                  <SelectItem value="festive">Festive</SelectItem>
-                  <SelectItem value="casual">Casual</SelectItem>
-                  <SelectItem value="party">Party</SelectItem>
-                  <SelectItem value="office">Office</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+
+          {/* Occasion - Kept but moved down as it wasn't in the main view of the request image */}
+          <div className="grid gap-2">
+            <Label htmlFor="occasion">Occasion</Label>
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select occasion" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="wedding">Wedding</SelectItem>
+                <SelectItem value="festive">Festive</SelectItem>
+                <SelectItem value="casual">Casual</SelectItem>
+                <SelectItem value="party">Party</SelectItem>
+                <SelectItem value="office">Office</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">
@@ -305,6 +385,16 @@ export default function ProductsPage() {
                   ? "Exquisite Banarasi silk saree featuring intricate zari work and traditional motifs. Perfect for weddings and special occasions."
                   : ""
               }
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="features">Key Features</Label>
+            <Textarea
+              id="features"
+              placeholder="• Feature 1 • Feature 2 • Feature 3"
+              rows={3}
+              defaultValue={isEdit ? "• Handwoven Banarasi Silk\n• Intricate Zari Work\n• Perfect for Weddings" : ""}
             />
           </div>
 
@@ -418,15 +508,9 @@ export default function ProductsPage() {
       {/* Inventory Tab */}
       <TabsContent value="inventory" className="space-y-4 mt-4">
         <div className="grid gap-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="sku">SKU *</Label>
-              <Input id="sku" placeholder="e.g., SAR-BAN-001" defaultValue={isEdit ? "SAR-BAN-001" : ""} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="barcode">Barcode (ISBN, UPC, GTIN)</Label>
-              <Input id="barcode" placeholder="Enter barcode" />
-            </div>
+          <div className="grid gap-2">
+            <Label htmlFor="barcode">Barcode (ISBN, UPC, GTIN)</Label>
+            <Input id="barcode" placeholder="Enter barcode" />
           </div>
 
           <Separator />
@@ -691,45 +775,22 @@ export default function ProductsPage() {
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleImport}>
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
-            <SheetTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Add New Product</SheetTitle>
-                <SheetDescription>Create a new product listing for your store</SheetDescription>
-              </SheetHeader>
-              <div className="py-6">
-                <ProductForm />
-              </div>
-              <SheetFooter className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsAddSheetOpen(false)}>
-                  Cancel
-                </Button>
-                <Button variant="outline">Save as Draft</Button>
-                <Button onClick={() => setIsAddSheetOpen(false)}>Publish Product</Button>
-              </SheetFooter>
-            </SheetContent>
-          </Sheet>
+          <Button onClick={() => setIsAddSheetOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
         </div>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Products</h1>
-        <p className="text-muted-foreground">Manage your product inventory</p>
-      </div>
+
 
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
@@ -839,59 +900,6 @@ export default function ProductsPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Filters section updated */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search products by name, SKU..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="saree">Saree</SelectItem>
-                <SelectItem value="kurta">Kurta</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="sarees">Sarees</SelectItem>
-                <SelectItem value="kurtas">Kurtas</SelectItem>
-                <SelectItem value="lehengas">Lehengas</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select>
-              <SelectTrigger className="w-full sm:w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="low-stock">Low Stock</SelectItem>
-                <SelectItem value="out-of-stock">Out of Stock</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={() => setIsAddSheetOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -1055,157 +1063,33 @@ export default function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Products Table updated */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Products</CardTitle>
-          <CardDescription>A list of all products in your store</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox />
-                </TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <Checkbox />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Image
-                        src={product.image || "/placeholder.svg"}
-                        alt={product.name}
-                        width={48}
-                        height={48}
-                        className="rounded-lg object-cover"
-                      />
-                      <span className="font-medium">{product.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{product.sku}</TableCell>
-                  <TableCell>{product.category}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{product.type}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">₹{product.price.toLocaleString("en-IN")}</TableCell>
-                  <TableCell className="text-right">{product.stock}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        product.status === "Active"
-                          ? "default"
-                          : product.status === "Low Stock"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {product.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setIsAddSheetOpen(true)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Copy className="mr-2 h-4 w-4" />
-                          Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <div className="flex items-center justify-between mt-4 pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, products.length)}{" "}
-              of {products.length} products
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage * itemsPerPage >= products.length}
-                onClick={() => setCurrentPage((p) => p + 1)}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Edit Product Sheet */}
-      <Sheet open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Edit Product</SheetTitle>
-            <SheetDescription>Update product details</SheetDescription>
-          </SheetHeader>
-          <div className="py-6">
+      {/* Edit Product Modal */}
+      <Dialog open={isEditSheetOpen} onOpenChange={setIsEditSheetOpen}>
+        <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>Update product details</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
             <ProductForm isEdit />
           </div>
-          <SheetFooter className="flex gap-2">
+          <DialogFooter className="flex gap-2 sm:gap-2">
             <Button variant="outline" onClick={() => setIsEditSheetOpen(false)}>
               Cancel
             </Button>
             <Button variant="outline">Unpublish</Button>
             <Button onClick={() => setIsEditSheetOpen(false)}>Save Changes</Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Sheet open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Add New Product</SheetTitle>
-            <SheetDescription>Create a new product with all details, variants, and SEO settings</SheetDescription>
-          </SheetHeader>
+      {/* Add New Product Modal */}
+      <Dialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen}>
+        <DialogContent className="w-[90vw] !max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>Create a new product with all details, variants, and SEO settings</DialogDescription>
+          </DialogHeader>
           <Tabs defaultValue="general" className="mt-6">
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="general">General</TabsTrigger>
@@ -1489,19 +1373,15 @@ export default function ProductsPage() {
               </div>
             </TabsContent>
           </Tabs>
-          <div className="flex gap-2 mt-6 pt-6 border-t">
-            <Button variant="outline" className="flex-1 bg-transparent" onClick={() => setIsAddSheetOpen(false)}>
+          <DialogFooter className="flex gap-2 sm:gap-2 mt-6 pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsAddSheetOpen(false)}>
               Cancel
             </Button>
-            <Button variant="outline" className="flex-1 bg-transparent">
-              Save as Draft
-            </Button>
-            <Button className="flex-1" onClick={() => setIsAddSheetOpen(false)}>
-              Publish Product
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+            <Button variant="outline">Save as Draft</Button>
+            <Button onClick={() => setIsAddSheetOpen(false)}>Publish Product</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

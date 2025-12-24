@@ -1,7 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useState } from "react"
+import Image from "next/image"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { Search, ShoppingBag, Heart, User, Menu, X, ChevronDown, Package, LogOut, Settings, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -13,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useCart } from "@/lib/cart-context"
+import { products } from "@/lib/data"
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -39,11 +42,76 @@ const navigation = [
   },
   { name: "Collections", href: "/collections" },
   { name: "New Arrivals", href: "/new-arrivals" },
+  { name: "About", href: "/about" },
+  { name: "Contact", href: "/contact" },
 ]
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showDropdown, setShowDropdown] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
   const { itemCount, toggleCart } = useCart()
+
+  // Filter products based on search query
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return []
+    const query = searchQuery.toLowerCase()
+    return products
+      .filter(
+        (product) =>
+          product.name.toLowerCase().includes(query) ||
+          product.category.toLowerCase().includes(query) ||
+          product.subcategory.toLowerCase().includes(query) ||
+          product.fabric.toLowerCase().includes(query) ||
+          product.occasion.toLowerCase().includes(query) ||
+          product.color.toLowerCase().includes(query)
+      )
+      .slice(0, 5) // Show max 5 suggestions
+  }, [searchQuery])
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (isSearchOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isSearchOpen])
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+      setShowDropdown(false)
+      setIsSearchOpen(false)
+      setSearchQuery("")
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setShowDropdown(false)
+      setIsSearchOpen(false)
+      setSearchQuery("")
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value)
+    setShowDropdown(e.target.value.trim().length > 0)
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -204,24 +272,89 @@ export function Header() {
 
         {/* Search bar */}
         {isSearchOpen && (
-          <div className="py-4 border-t">
-            <div className="relative max-w-xl mx-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="py-4 border-t" ref={searchRef}>
+            <form onSubmit={handleSearch} className="relative max-w-xl mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
               <input
+                ref={inputRef}
                 type="text"
+                value={searchQuery}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => searchQuery.trim() && setShowDropdown(true)}
                 placeholder="Search for sarees, kurtas, collections..."
-                className="w-full pl-10 pr-4 py-3 border border-border rounded-sm bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                autoFocus
+                className="w-full pl-10 pr-12 py-3 border border-border rounded-sm bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <Button
+                type="button"
                 variant="ghost"
                 size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2"
-                onClick={() => setIsSearchOpen(false)}
+                onClick={() => {
+                  setIsSearchOpen(false)
+                  setSearchQuery("")
+                  setShowDropdown(false)
+                }}
               >
                 <X className="h-4 w-4" />
               </Button>
-            </div>
+
+              {/* Search Dropdown */}
+              {showDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-background border border-border rounded-md shadow-lg overflow-hidden z-50">
+                  {searchResults.length > 0 ? (
+                    <>
+                      <div className="p-2 border-b border-border">
+                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide px-2">
+                          Products
+                        </span>
+                      </div>
+                      {searchResults.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`/product/${product.id}`}
+                          className="flex items-center gap-3 p-3 hover:bg-muted transition-colors"
+                          onClick={() => {
+                            setShowDropdown(false)
+                            setIsSearchOpen(false)
+                            setSearchQuery("")
+                          }}
+                        >
+                          <div className="w-12 h-12 rounded-sm overflow-hidden bg-muted flex-shrink-0">
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{product.name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {product.subcategory} • ₹{product.price.toLocaleString("en-IN")}
+                            </p>
+                          </div>
+                        </Link>
+                      ))}
+                      <Link
+                        href={`/search?q=${encodeURIComponent(searchQuery)}`}
+                        className="block p-3 text-center text-sm text-primary hover:bg-muted border-t border-border transition-colors font-medium"
+                        onClick={() => {
+                          setShowDropdown(false)
+                          setIsSearchOpen(false)
+                          setSearchQuery("")
+                        }}
+                      >
+                        View all results for "{searchQuery}"
+                      </Link>
+                    </>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No products found for "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+            </form>
           </div>
         )}
       </div>
